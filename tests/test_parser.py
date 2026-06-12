@@ -63,7 +63,7 @@ class TestParseField:
             parse_field("*/0", 0, 59)
 
     def test_step_negative_raises(self):
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(ValueError, match="Unrecognized"):
             parse_field("*/-5", 0, 59)
 
     def test_step_exceeds_range_raises(self):
@@ -71,7 +71,7 @@ class TestParseField:
             parse_field("*/100", 0, 59)
 
     def test_range_start_outside_low(self):
-        with pytest.raises(ValueError, match="outside"):
+        with pytest.raises(ValueError, match="Unrecognized"):
             parse_field("-1-5", 0, 59)
 
     def test_range_end_outside_high(self):

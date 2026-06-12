@@ -50,10 +50,21 @@ def _parse_time_from_text(text: str) -> tuple | None:
 
 
 def _parse_day_from_text(text: str) -> int | None:
-    """Extract a day name from text and return its cron number (0-6)."""
+    """Extract a day name from text and return its cron number (0-6).
+
+    Uses word-boundary matching to avoid false matches like 'mon' inside 'month'.
+    Checks full day names first, then abbreviations to avoid partial matches.
+    """
     text_lower = text.lower()
-    for name, num in DAY_NAME_TO_NUM.items():
-        if name in text_lower:
+    # Check full day names first (longer = more specific)
+    full_names = {k: v for k, v in DAY_NAME_TO_NUM.items() if len(k) > 3}
+    for name, num in full_names.items():
+        if re.search(rf"\b{re.escape(name)}\b", text_lower):
+            return num
+    # Then check abbreviated names with word boundaries
+    short_names = {k: v for k, v in DAY_NAME_TO_NUM.items() if len(k) <= 3}
+    for name, num in short_names.items():
+        if re.search(rf"\b{re.escape(name)}\b", text_lower):
             return num
     return None
 
@@ -178,10 +189,10 @@ def generate_cron(nl_description: str) -> str:
 
     # Set time
     if hour_val is not None:
-        minute = f"{minute_val:02d}"
+        minute = str(minute_val)
         hour = str(hour_val)
     elif time is not None:
-        minute = f"{minute_val:02d}"
+        minute = str(minute_val)
         hour = str(hour_val)
     else:
         # Check for "at" without explicit time → try to extract just hour
@@ -211,6 +222,11 @@ def generate_cron(nl_description: str) -> str:
             f"Cannot parse '{nl_description}'. Try a description like "
             f"'every 5 minutes', 'daily at 9am', or 'weekdays at 3:30 PM'."
         )
+
+    # If a day was specified but no time, default to midnight
+    if hour == "*" and minute == "*" and (dow != "*" or dom != "*"):
+        hour = "0"
+        minute = "0"
 
     # Build cron string
     cron = f"{minute} {hour} {dom} {month} {dow}"
